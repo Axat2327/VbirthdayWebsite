@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Special Day for You ✨</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Three.js for the 3D Finale -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* Setup Inter font globally */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            cursor: default;
+        }
+
+        /* Custom utility for the subtle radial shine background */
+        .bg-shine {
+            background: radial-gradient(circle at center, rgba(255, 69, 140, 0.1) 0%, rgba(17, 24, 39, 0) 70%);
+            min-height: 100vh;
+        }
+
+        /* Keyframe animation for spinning loader */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #f43f5e; /* Rose 500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Floating particles/confetti effect (Chapter 1) */
+        @keyframes floatEffect {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translateY(-100vh) scale(1.5); opacity: 0; }
+        }
+
+        .floating-particle {
+            position: absolute;
+            bottom: -50px;
+            animation: floatEffect linear infinite;
+            pointer-events: none;
+            will-change: transform, opacity;
+        }
+
+        /* Typewriter effect for Chapter 2 */
+        .typewriter-cursor {
+            border-right: 2px solid #f43f5e;
+            animation: blink-cursor 0.75s step-end infinite;
+        }
+        @keyframes blink-cursor {
+            from, to { border-color: transparent }
+            50% { border-color: #f43f5e; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white transition-all duration-500 overflow-hidden bg-shine">
+
+    <!-- Main Application Container -->
+    <div id="app" class="relative w-full min-h-screen flex items-center justify-center p-4">
+
+        <!-- Central Content Area -->
+        <div id="content-area" class="text-center max-w-2xl w-full z-10">
+
+            <!-- Chapter 1: Landing Screen -->
+            <div id="chapter-1" class="space-y-8 transition-opacity duration-1000 hidden">
+                <p class="text-xl sm:text-2xl text-rose-300 tracking-wider font-light animate-pulse">WELCOME</p>
+                <h1 class="text-5xl sm:text-7xl font-extrabold tracking-tight leading-tight bg-clip-text text-transparent bg-gradient-to-r from-rose-400 to-pink-500">
+                    A Day Just For You
+                </h1>
+                <p class="text-lg sm:text-xl text-gray-400">
+                    Prepare for a guided experience. This is a special moment, entirely dedicated to celebrating *you*.
+                </p>
+                <button id="start-button" class="mt-8 px-8 py-3 bg-rose-600 text-white text-lg font-semibold rounded-full shadow-lg shadow-rose-900/50 hover:bg-rose-500 transition-all duration-300 transform hover:scale-105 active:scale-95">
+                    Click to Begin the Celebration
+                </button>
+            </div>
+
+            <!-- Chapter 2: Personalized Message -->
+            <div id="chapter-2" class="space-y-6 transition-opacity duration-1000 hidden opacity-0">
+                <p class="text-lg text-rose-400 font-medium">Chapter I: The Core Message</p>
+                <h2 class="text-4xl sm:text-6xl font-bold mb-6">Happy Birthday, <span class="text-pink-400">My Dear</span>.</h2>
+                <div class="text-left bg-gray-800/70 backdrop-blur-sm p-6 sm:p-8 rounded-xl border border-rose-700/50 shadow-2xl shadow-rose-900/20 min-h-[150px]">
+                    <p id="message-text" class="text-xl sm:text-2xl text-gray-200 leading-relaxed"></p>
+                </div>
+                <button id="continue-button" class="mt-8 px-8 py-3 bg-rose-600 text-white text-lg font-semibold rounded-full shadow-lg hover:bg-rose-500 transition-all duration-300 transform hover:scale-105 active:scale-95 hidden">
+                    See the Grand Finale
+                </button>
+            </div>
+
+            <!-- Chapter 3: 3D Finale -->
+            <div id="chapter-3" class="transition-opacity duration-1000 hidden opacity-0">
+                <p class="text-lg text-rose-400 font-medium mb-4">Chapter II: The Perpetual Promise</p>
+                <h2 class="text-4xl sm:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-rose-400 to-pink-500">
+                    My Heart, Eternally
+                </h2>
+                <!-- Canvas container for Three.js -->
+                <div id="canvas-container" class="w-full h-[300px] sm:h-[400px] rounded-xl overflow-hidden border border-rose-700/50 shadow-2xl shadow-rose-900/50">
+                    <canvas id="three-canvas" class="w-full h-full"></canvas>
+                </div>
+                <p class="text-gray-400 mt-6 text-lg italic">
+                    (You can drag the mouse to rotate the heart. It spins just for you.)
+                </p>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loading-indicator" class="flex flex-col items-center justify-center space-y-4 hidden">
+                <div class="loader"></div>
+                <p class="text-rose-400">Setting up the experience...</p>
+            </div>
+        </div>
+
+        <!-- Floating Particles Layer (Chapter 1) -->
+        <div id="particle-container" class="absolute inset-0 z-0 pointer-events-none"></div>
+
+    </div>
+
+    <script type="module">
+        const C1 = document.getElementById('chapter-1');
+        const C2 = document.getElementById('chapter-2');
+        const C3 = document.getElementById('chapter-3');
+        const startButton = document.getElementById('start-button');
+        const continueButton = document.getElementById('continue-button');
+        const messageText = document.getElementById('message-text');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const particleContainer = document.getElementById('particle-container');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        let currentChapter = 0;
+        let threeScene = null;
+        let threeRenderer = null;
+        let threeCamera = null;
+        let crystalHeart = null;
+        let isTyping = false;
+        let pointerDown = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        const MESSAGE_CONTENT = `
+            Every year, this day feels like a reset button—a perfect moment to reflect on how lucky I am to have you. You bring such a genuine, beautiful light into the world, and honestly, being near you feels like home. I hope today is filled with nothing but joy, laughter, and all the tiny, perfect moments you deserve. Thank you for simply being you. I cherish our connection more than words can say. Now, click below for your final surprise.
+        `.trim().replace(/\s+/g, ' '); // Clean up the message for typing
+
+        // --- Core Application Flow ---
+
+        function showChapter(chapterId) {
+            [C1, C2, C3, loadingIndicator].forEach(el => el.classList.add('hidden', 'opacity-0'));
+
+            const target = document.getElementById(chapterId);
+            if (target) {
+                target.classList.remove('hidden');
+                // Use a short delay to allow 'hidden' removal before adding 'opacity-100' for the transition
+                setTimeout(() => target.classList.remove('opacity-0'), 100);
+            }
+        }
+
+        async function startApp() {
+            showChapter('loading-indicator');
+
+            // 1. Initial setup (can be slow on first run, so use loader)
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate loading
+
+            // 2. Go to Chapter 1
+            currentChapter = 1;
+            showChapter('chapter-1');
+            startParticles();
+        }
+
+        function advanceChapter() {
+            if (currentChapter === 1) {
+                currentChapter = 2;
+                showChapter('chapter-2');
+                stopParticles();
+                startTypingEffect();
+            } else if (currentChapter === 2) {
+                currentChapter = 3;
+                showChapter('chapter-3');
+                // Ensure typewriter is done before proceeding
+                if (!isTyping) {
+                    initThreeD();
+                }
+            }
+        }
+
+        // --- Chapter 1: Floating Particles ---
+
+        function createParticle(content, color, duration, size, delay) {
+            const particle = document.createElement('div');
+            particle.className = 'floating-particle ' + color + ' text-3xl';
+            particle.innerHTML = content;
+            const screenWidth = window.innerWidth;
+            const startX = Math.random() * screenWidth;
+            particle.style.left = `${startX}px`;
+            particle.style.fontSize = `${size}px`;
+            particle.style.animationDuration = `${duration}s`;
+            particle.style.animationDelay = `${delay}s`;
+            particleContainer.appendChild(particle);
+
+            // Clean up the particle once it's off-screen
+            particle.addEventListener('animationend', () => particle.remove());
+        }
+
+        function startParticles() {
+            const particles = ['💖', '✨', '🌹', '🌟'];
+            const colors = ['text-rose-500', 'text-pink-400', 'text-white', 'text-rose-300'];
+
+            for (let i = 0; i < 50; i++) {
+                const content = particles[Math.floor(Math.random() * particles.length)];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const duration = 8 + Math.random() * 8; // 8 to 16 seconds
+                const size = 18 + Math.random() * 12;  // 18px to 30px
+                const delay = Math.random() * 10;
+                createParticle(content, color, duration, size, delay);
+            }
+        }
+
+        function stopParticles() {
+            // Simply clear the container to stop all existing animations
+            particleContainer.innerHTML = '';
+        }
+
+        // --- Chapter 2: Typewriter Effect ---
+
+        function startTypingEffect() {
+            isTyping = true;
+            let i = 0;
+            const textElement = messageText;
+            textElement.classList.add('typewriter-cursor'); // Add blinking cursor
+
+            function type() {
+                if (i < MESSAGE_CONTENT.length) {
+                    textElement.innerHTML += MESSAGE_CONTENT.charAt(i);
+                    i++;
+                    setTimeout(type, 30); // Typing speed
+                } else {
+                    textElement.classList.remove('typewriter-cursor'); // Remove blinking cursor
+                    continueButton.classList.remove('hidden');
+                    isTyping = false;
+                }
+            }
+            type();
+        }
+
+        // --- Chapter 3: 3D Three.js Finale ---
+
+        function initThreeD() {
+            const canvas = document.getElementById('three-canvas');
+            const container = canvasContainer;
+
+            // Scene setup
+            threeScene = new THREE.Scene();
+            threeCamera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            threeRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            threeRenderer.setSize(container.clientWidth, container.clientHeight);
+            threeRenderer.setClearColor(0x000000, 0); // Transparent background
+
+            // Lighting: Subtle ambient light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            threeScene.add(ambientLight);
+
+            // Lighting: Point light for dramatic effect
+            const pointLight = new THREE.PointLight(0xff4580, 50, 100);
+            pointLight.position.set(5, 5, 5);
+            threeScene.add(pointLight);
+
+            // Geometry: A complex, glowing shape (Dodecahedron, styled as a 'Crystal Heart')
+            const geometry = new THREE.DodecahedronGeometry(2, 0);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: 0xff0040,            // Deep pink base
+                emissive: 0xff0040,         // Glowing effect
+                emissiveIntensity: 0.5,
+                metalness: 0.9,
+                roughness: 0.1,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1,
+                opacity: 0.9,
+                transparent: true,
+            });
+
+            crystalHeart = new THREE.Mesh(geometry, material);
+            threeScene.add(crystalHeart);
+
+            // Camera positioning
+            threeCamera.position.z = 5;
+
+            // Add event listeners for mouse interaction
+            canvas.addEventListener('mousedown', onPointerDown);
+            canvas.addEventListener('mouseup', onPointerUp);
+            canvas.addEventListener('mousemove', onPointerMove);
+            canvas.addEventListener('touchstart', onPointerDown, { passive: true });
+            canvas.addEventListener('touchend', onPointerUp);
+            canvas.addEventListener('touchmove', onPointerMove, { passive: true });
+
+            // Resize handler
+            window.addEventListener('resize', onWindowResize);
+
+            // Start animation loop
+            animateThreeD();
+        }
+
+        function onWindowResize() {
+            if (!threeRenderer) return;
+            const width = canvasContainer.clientWidth;
+            const height = canvasContainer.clientHeight;
+            threeCamera.aspect = width / height;
+            threeCamera.updateProjectionMatrix();
+            threeRenderer.setSize(width, height);
+        }
+
+        function onPointerDown(event) {
+            pointerDown = true;
+            lastX = event.clientX || event.touches[0].clientX;
+            lastY = event.clientY || event.touches[0].clientY;
+            event.preventDefault();
+        }
+
+        function onPointerUp() {
+            pointerDown = false;
+        }
+
+        function onPointerMove(event) {
+            if (!pointerDown || !crystalHeart) return;
+
+            const clientX = event.clientX || event.touches[0].clientX;
+            const clientY = event.clientY || event.touches[0].clientY;
+
+            const deltaX = clientX - lastX;
+            const deltaY = clientY - lastY;
+
+            crystalHeart.rotation.y += deltaX * 0.005;
+            crystalHeart.rotation.x += deltaY * 0.005;
+
+            lastX = clientX;
+            lastY = clientY;
+            event.preventDefault();
+        }
+
+        function animateThreeD() {
+            if (!threeRenderer || !crystalHeart) return;
+
+            requestAnimationFrame(animateThreeD);
+
+            // Continuous slow spin when not being dragged
+            if (!pointerDown) {
+                crystalHeart.rotation.x += 0.005;
+                crystalHeart.rotation.y += 0.008;
+            }
+
+            threeRenderer.render(threeScene, threeCamera);
+        }
+
+        // --- Event Listeners and Initialization ---
+
+        startButton.addEventListener('click', advanceChapter);
+        continueButton.addEventListener('click', advanceChapter);
+
+        window.onload = startApp;
+
+    </script>
+</body>
+</html>
